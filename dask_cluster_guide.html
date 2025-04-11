@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dask分布式计算环境配置和使用指南</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.2/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2d86ee;
+            --secondary-color: #333;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --code-bg: #f5f7f9;
+            --border-color: #e1e4e8;
+            --hover-color: #0056b3;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--background-color);
+            padding: 20px;
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 320px;
+            max-width: 900px;
+        }
+        
+        .toc-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .toc {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .toc li {
+            margin-bottom: 8px;
+        }
+        
+        .toc a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        .toc a:hover {
+            background: rgba(45,134,238,0.1);
+            color: var(--primary-color);
+        }
+        
+        .toc-l2 {
+            padding-left: 20px;
+            font-size: 0.9em;
+        }
+        
+        .toc-l3 {
+            padding-left: 40px;
+            font-size: 0.85em;
+        }
+        
+        h1, h2, h3, h4 {
+            color: var(--secondary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        h1 {
+            font-size: 2.2em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        h2 {
+            font-size: 1.8em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        
+        h3 {
+            font-size: 1.4em;
+        }
+        
+        h4 {
+            font-size: 1.2em;
+        }
+        
+        p, ul, ol {
+            margin-bottom: 1.2em;
+        }
+        
+        code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 85%;
+        }
+        
+        pre {
+            background: var(--code-bg);
+            border-radius: 5px;
+            padding: 16px;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            margin: 1.2em 0;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 90%;
+        }
+        
+        blockquote {
+            border-left: 4px solid var(--primary-color);
+            margin: 1.5em 0;
+            padding: 0.5em 1em;
+            color: #666;
+            background: #f9f9f9;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1.5em 0;
+        }
+        
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+        }
+        
+        th {
+            background-color: #f0f2f5;
+            font-weight: 600;
+        }
+        
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+            color: var(--hover-color);
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        
+        .top-bar {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .top-bar h1 {
+            margin: 0;
+            font-size: 1.2em;
+            color: white;
+            border: none;
+            padding: 0;
+        }
+
+        .theme-switch {
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch label {
+            margin-right: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .theme-switch input {
+            height: 0;
+            width: 0;
+            visibility: hidden;
+        }
+
+        .theme-switch-toggle {
+            cursor: pointer;
+            width: 40px;
+            height: 20px;
+            background: #999;
+            display: block;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .theme-switch-toggle:hover {
+            background: #777;
+        }
+
+        .theme-switch-toggle:after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 16px;
+            transition: 0.3s;
+        }
+
+        input:checked + .theme-switch-toggle {
+            background: #555;
+        }
+
+        input:checked + .theme-switch-toggle:hover {
+            background: #333;
+        }
+
+        input:checked + .theme-switch-toggle:after {
+            left: calc(100% - 2px);
+            transform: translateX(-100%);
+        }
+        
+        /* 暗色主题 */
+        body.dark-theme {
+            --primary-color: #4e9cf1;
+            --secondary-color: #e1e1e1;
+            --background-color: #222;
+            --text-color: #e1e1e1;
+            --code-bg: #2d2d2d;
+            --border-color: #444;
+            --hover-color: #79c0ff;
+            background: #121212;
+        }
+        
+        body.dark-theme .sidebar {
+            background: #1e1e1e;
+        }
+        
+        body.dark-theme .top-bar {
+            background: #333;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            
+            .content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            
+            .top-bar {
+                padding: 10px;
+            }
+        }
+
+        /* 预定义的目录项，确保即使JavaScript不工作也能显示基本目录 */
+        .default-toc {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Dask分布式计算环境配置和使用指南</h1>
+        <div class="theme-switch" onclick="toggleTheme()">
+            <label for="theme-toggle">暗色模式</label>
+            <input type="checkbox" id="theme-toggle">
+            <span class="theme-switch-toggle"></span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="toc-title">目录</div>
+            <ul class="toc" id="toc">
+                <!-- 静态预定义目录，确保即使JavaScript失败也有基本目录 -->
+                <li><a href="#dask分布式计算环境配置和使用指南">Dask分布式计算环境配置和使用指南</a></li>
+                <li><a href="#1-简介" class="toc-l2">1. 简介</a></li>
+                <li><a href="#2-环境配置" class="toc-l2">2. 环境配置</a></li>
+                <li><a href="#2-1-安装dask和依赖" class="toc-l3">2.1 安装Dask和依赖</a></li>
+                <li><a href="#2-2-集群架构设置" class="toc-l3">2.2 集群架构设置</a></li>
+                <li><a href="#2-3-配置多进程工作节点" class="toc-l3">2.3 配置多进程工作节点</a></li>
+                <li><a href="#2-4-版本兼容性" class="toc-l3">2.4 版本兼容性</a></li>
+                <li><a href="#3-启动和监控集群" class="toc-l2">3. 启动和监控集群</a></li>
+                <li><a href="#4-dask使用场景" class="toc-l2">4. Dask使用场景</a></li>
+                <li><a href="#5-性能优化" class="toc-l2">5. 性能优化</a></li>
+                <li><a href="#6-故障排除" class="toc-l2">6. 故障排除</a></li>
+                <li><a href="#7-集群管理最佳实践" class="toc-l2">7. 集群管理最佳实践</a></li>
+                <li><a href="#8-高级部署选项" class="toc-l2">8. 高级部署选项</a></li>
+                <li><a href="#9-参考文档" class="toc-l2">9. 参考文档</a></li>
+                <li><a href="#10-附录命令参考" class="toc-l2">10. 附录：命令参考</a></li>
+            </ul>
+        </div>
+        
+        <div class="content">
+            <div id="content-wrapper">
+                <!-- 这里将放置渲染后的内容 -->
+                <h1 id="dask分布式计算环境配置和使用指南">Dask分布式计算环境配置和使用指南</h1>
+
+                <h2 id="1-简介">1. 简介</h2>
+                <p>Dask是一个灵活的并行计算库，能够处理大规模数据集和计算任务。本文档提供Dask分布式环境的配置方法、使用技巧和最佳实践。</p>
+
+                <h2 id="2-环境配置">2. 环境配置</h2>
+
+                <h3 id="2-1-安装dask和依赖">2.1 安装Dask和依赖</h3>
+                <pre><code class="language-bash"># 创建虚拟环境
+python -m venv myenv_py310
+source myenv_py310/bin/activate  # Linux/Mac
+# 或 myenv_py310\Scripts\activate  # Windows
+
+# 安装基本包
+pip install "dask[complete]" distributed
+
+# 安装额外依赖
+pip install numpy pandas scikit-learn matplotlib</code></pre>
+
+                <h3 id="2-2-集群架构设置">2.2 集群架构设置</h3>
+
+                <h4>调度器节点设置</h4>
+                <p>创建调度器配置文件 <code>~/.config/dask/distributed.yaml</code>：</p>
+                <pre><code class="language-yaml">distributed:
+  scheduler:
+    protocol: tcp
+    host: 192.168.1.59    # 调度器IP
+    port: 8786            # 调度器端口
+    dashboard:
+      address: :8787      # 仪表板端口
+    work-stealing: True
+    allowed-failures: 3
+    
+  comm:
+    compression: auto
+    default-scheme: tcp
+    socket-backlog: 2048
+    
+  diagnostics:
+    port: 8789</code></pre>
+
+                <p>创建调度器启动脚本 <code>start_scheduler.sh</code>：</p>
+                <pre><code class="language-bash">#!/bin/bash
+dask-scheduler \
+    --host 192.168.1.59 \
+    --port 8786 \
+    --dashboard-address :8787</code></pre>
+
+                <h4>工作节点设置</h4>
+                <p>工作节点启动脚本 <code>start_worker.sh</code>：</p>
+                <pre><code class="language-bash">#!/bin/bash
+dask-worker 192.168.1.59:8786 --nthreads 16 --memory-limit 4GB</code></pre>
+
+                <p>设置执行权限：</p>
+                <pre><code class="language-bash">chmod +x start_scheduler.sh
+chmod +x start_worker.sh</code></pre>
+
+                <h3 id="2-3-配置多进程工作节点">2.3 配置多进程工作节点</h3>
+                <p>如果需要启动多个worker进程而不是单个多线程进程：</p>
+                <pre><code class="language-bash">#!/bin/bash
+dask-worker 192.168.1.59:8786 --nworkers 4 --nthreads 4 --memory-limit 4GB</code></pre>
+
+                <h3 id="2-4-版本兼容性">2.4 版本兼容性</h3>
+                <p>确保客户端和服务器端使用兼容的依赖版本，特别是NumPy、Pandas等核心计算库。</p>
+
+                <h2 id="3-启动和监控集群">3. 启动和监控集群</h2>
+
+                <h3 id="3-1-启动集群">3.1 启动集群</h3>
+                <pre><code class="language-bash"># 在调度器节点执行
+./start_scheduler.sh
+
+# 在工作节点执行
+./start_worker.sh</code></pre>
+
+                <h3 id="3-2-访问仪表板">3.2 访问仪表板</h3>
+                <p>在浏览器中访问：</p>
+                <pre><code>http://192.168.1.59:8787</code></pre>
+
+                <p>仪表板提供:</p>
+                <ul>
+                    <li>集群状态概览</li>
+                    <li>任务执行可视化</li>
+                    <li>资源使用监控</li>
+                    <li>性能分析工具</li>
+                </ul>
+
+                <h3 id="3-3-集群状态验证">3.3 集群状态验证</h3>
+                <p>使用Python代码检查集群状态：</p>
+                <pre><code class="language-python">from dask.distributed import Client
+
+# 连接到集群
+client = Client('192.168.1.59:8786')
+
+# 打印集群信息
+print(client)
+print(f"调度器地址: {client.scheduler.address}")
+print(f"工作节点数量: {len(client.cluster.workers)}")
+print(f"总线程数: {client.cluster.nthreads}")</code></pre>
+
+                <h2 id="4-dask使用场景">4. Dask使用场景</h2>
+
+                <h3 id="4-1-大规模数据分析">4.1 大规模数据分析</h3>
+                <pre><code class="language-python">import dask.dataframe as dd
+
+# 读取大型数据集
+df = dd.read_csv('large-*.csv')
+
+# 数据转换
+df = df.categorize('category_column')
+df = df.fillna(0)
+
+# 聚合计算
+result = df.groupby('key').mean().compute()</code></pre>
+
+                <h3 id="4-2-并行数组计算">4.2 并行数组计算</h3>
+                <pre><code class="language-python">import dask.array as da
+import numpy as np
+
+# 创建大型数组
+x = da.random.random((100000, 100000), chunks=(10000, 10000))
+
+# 矩阵运算
+result = (x + x.T).mean(axis=0).compute()</code></pre>
+
+                <h3 id="4-3-自定义并行任务">4.3 自定义并行任务</h3>
+                <pre><code class="language-python">from dask import delayed
+
+@delayed
+def process_chunk(chunk):
+    # 处理逻辑
+    return result
+
+# 并行处理多个数据块
+results = [process_chunk(chunk) for chunk in data_chunks]
+final_result = dask.compute(*results)</code></pre>
+
+                <h3 id="4-4-机器学习">4.4 机器学习</h3>
+                <pre><code class="language-python">import dask_ml.model_selection as dcv
+from sklearn.ensemble import RandomForestClassifier
+
+# 分布式超参数搜索
+params = {'max_depth': [10, 20, 30], 'n_estimators': [100, 200, 300]}
+search = dcv.GridSearchCV(RandomForestClassifier(), params)
+search.fit(X, y)</code></pre>
+
+                <h2 id="5-性能优化">5. 性能优化</h2>
+
+                <h3 id="5-1-分区和块大小调优">5.1 分区和块大小调优</h3>
+                <pre><code class="language-python"># 数据框分区优化
+df = dd.read_csv('large-*.csv', blocksize='64MB')
+
+# 数组块大小优化
+x = da.ones((10000, 10000), chunks=(1000, 1000))</code></pre>
+
+                <h3 id="5-2-内存管理">5.2 内存管理</h3>
+                <p>配置工作节点内存使用：</p>
+                <pre><code class="language-yaml">distributed:
+  worker:
+    memory:
+      target: 0.6      # 目标内存使用率
+      spill: 0.7       # 开始溢出到磁盘的阈值
+      pause: 0.8       # 暂停接收新任务的阈值
+      terminate: 0.95  # 终止的阈值</code></pre>
+
+                <h3 id="5-3-资源监控">5.3 资源监控</h3>
+                <pre><code class="language-python"># 获取工作节点资源使用情况
+client.run(lambda: psutil.Process().memory_info().rss / 1e9)  # GB内存
+client.run(lambda: psutil.cpu_percent())  # CPU使用率</code></pre>
+
+                <h2 id="6-故障排除">6. 故障排除</h2>
+
+                <h3 id="6-1-常见问题">6.1 常见问题</h3>
+                <ol>
+                    <li><strong>连接问题</strong>
+                        <ul>
+                            <li>检查防火墙设置，确保端口8786、8787开放</li>
+                            <li>验证IP地址配置正确</li>
+                        </ul>
+                    </li>
+                    <li><strong>版本兼容性问题</strong>
+                        <pre><code class="language-bash"># 检查版本
+python -c "import dask; print(dask.__version__)"</code></pre>
+                    </li>
+                    <li><strong>内存错误</strong>
+                        <ul>
+                            <li>减少每个worker的内存限制</li>
+                            <li>增加块/分区大小以减少任务数量</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3 id="6-2-日志分析">6.2 日志分析</h3>
+                <pre><code class="language-bash"># 查看调度器日志
+tail -f ~/.dask/scheduler-*.log
+
+# 查看工作节点日志
+tail -f ~/.dask/worker-*.log</code></pre>
+
+                <h3 id="6-3-解决dos格式脚本问题">6.3 解决DOS格式脚本问题</h3>
+                <p>如果在Linux上运行Windows创建的脚本遇到问题：</p>
+                <pre><code class="language-bash"># 安装dos2unix
+sudo apt-get install dos2unix
+
+# 转换脚本格式
+dos2unix start_scheduler.sh
+dos2unix start_worker.sh</code></pre>
+
+                <h2 id="7-集群管理最佳实践">7. 集群管理最佳实践</h2>
+
+                <h3 id="7-1-线程vs进程">7.1 线程vs进程</h3>
+                <ul>
+                    <li><strong>多线程（单进程）</strong>：适合NumPy/Pandas计算，共享内存</li>
+                    <li><strong>多进程</strong>：更好的隔离性，适合纯Python计算，避免GIL限制</li>
+                </ul>
+
+                <h3 id="7-2-扩展集群">7.2 扩展集群</h3>
+                <pre><code class="language-bash"># 启动额外worker
+dask-worker 192.168.1.59:8786 --nthreads 16</code></pre>
+
+                <h3 id="7-3-关闭集群">7.3 关闭集群</h3>
+                <pre><code class="language-bash"># 终止worker进程
+pkill -f dask-worker
+
+# 终止调度器
+pkill -f dask-scheduler</code></pre>
+
+                <h2 id="8-高级部署选项">8. 高级部署选项</h2>
+
+                <h3 id="8-1-kubernetes部署">8.1 Kubernetes部署</h3>
+                <pre><code class="language-python">from dask_kubernetes import KubeCluster
+
+cluster = KubeCluster()
+cluster.scale(10)  # 扩展到10个pod</code></pre>
+
+                <h3 id="8-2-云环境部署">8.2 云环境部署</h3>
+                <pre><code class="language-python">from dask_cloudprovider.aws import FargateCluster
+
+cluster = FargateCluster(n_workers=10)</code></pre>
+
+                <h3 id="8-3-hpc集成">8.3 HPC集成</h3>
+                <pre><code class="language-python">from dask_jobqueue import SLURMCluster
+
+cluster = SLURMCluster(cores=16, memory="32GB")
+cluster.scale(jobs=10)</code></pre>
+
+                <h2 id="9-参考文档">9. 参考文档</h2>
+                <ul>
+                    <li><a href="https://docs.dask.org/">Dask官方文档</a></li>
+                    <li><a href="https://distributed.dask.org/">Distributed文档</a></li>
+                    <li><a href="https://examples.dask.org/">Dask示例</a></li>
+                </ul>
+
+                <h2 id="10-附录命令参考">10. 附录：命令参考</h2>
+                <pre><code>dask-scheduler --help     # 查看调度器参数
+dask-worker --help        # 查看工作节点参数</code></pre>
+
+                <hr>
+                <p>本文档由您基于实际配置和使用经验创建，可根据需要进行更新和扩展。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换函数
+        function toggleTheme() {
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.checked = !themeToggle.checked;
+            
+            document.body.classList.toggle('dark-theme');
+            
+            // 存储用户主题选择
+            if(document.body.classList.contains('dark-theme')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        }
+        
+        // 确保页面完全加载后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 代码高亮
+            document.querySelectorAll('pre code').forEach((block) => {
+                if(window.hljs) {
+                    hljs.highlightBlock(block);
+                }
+            });
+            
+            // 根据用户之前选择的主题设置
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('theme-toggle').checked = true;
+            }
+            
+            // 点击目录项平滑滚动到对应位置
+            document.querySelectorAll('.toc a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if(targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
